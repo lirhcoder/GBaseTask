@@ -8,7 +8,7 @@ const { connectDatabase } = require('./utils/database-sqlite');
 
 // 导入服务
 const LarkClient = require('./services/larkClient');
-const TaskSystem = require('./services/taskSystem');
+const TaskSystem = require('./services/taskSystem-sqlite');
 const SyncService = require('./services/syncService');
 const ReminderService = require('./services/reminderService');
 
