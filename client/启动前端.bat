@@ -1,31 +1,32 @@
 @echo off
+chcp 65001 >nul
 echo ========================================
-echo   启动 Lark 任务管理系统前端
+echo   Start Lark Task Management Frontend
 echo ========================================
 echo.
 
 cd /d "%~dp0"
 
-echo 正在检查前端依赖...
+echo Checking frontend dependencies...
 if not exist node_modules (
     echo.
-    echo 首次运行，正在安装前端依赖...
-    echo 这可能需要 2-3 分钟...
+    echo First run, installing frontend dependencies...
+    echo This may take 2-3 minutes...
     echo.
     
     call npm install
     
     echo.
-    echo 安装 UI 组件库...
+    echo Installing UI libraries...
     call npm install @mui/material @emotion/react @emotion/styled @mui/icons-material axios react-router-dom @tanstack/react-query dayjs
 ) else (
-    echo 依赖已安装
+    echo Dependencies already installed
 )
 
 echo.
 echo ========================================
-echo 正在启动前端开发服务器...
-echo 前端地址: http://localhost:3001
+echo Starting frontend development server...
+echo Frontend URL: http://localhost:3001
 echo ========================================
 echo.
 
