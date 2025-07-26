@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lark 任务管理系统 - API 测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+        
+        .status.online {
+            background-color: #4caf50;
+            color: white;
+        }
+        
+        .status.offline {
+            background-color: #f44336;
+            color: white;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        h2 {
+            color: #555;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        
+        button {
+            background-color: #1976d2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #1565c0;
+        }
+        
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        button.danger {
+            background-color: #f44336;
+        }
+        
+        button.danger:hover {
+            background-color: #d32f2f;
+        }
+        
+        #result {
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .task-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .form-group.full-width {
+            grid-column: 1 / -1;
+        }
+        
+        label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        input, select, textarea {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+        
+        .task-list {
+            margin-top: 15px;
+        }
+        
+        .task-item {
+            background-color: #f9f9f9;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .task-info {
+            flex: 1;
+        }
+        
+        .task-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .task-meta {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-right: 5px;
+        }
+        
+        .badge.bug { background-color: #ffebee; color: #c62828; }
+        .badge.task { background-color: #e3f2fd; color: #1565c0; }
+        .badge.requirement { background-color: #f3e5f5; color: #6a1b9a; }
+        
+        .badge.urgent { background-color: #ffcdd2; color: #b71c1c; }
+        .badge.high { background-color: #ffe0b2; color: #e65100; }
+        .badge.medium { background-color: #fff3e0; color: #ef6c00; }
+        .badge.low { background-color: #e8f5e9; color: #2e7d32; }
+        
+        .loading {
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            Lark 任务管理系统 - API 测试
+            <span id="status" class="status offline">离线</span>
+        </h1>
+        
+        <div class="section">
+            <h2>🔧 系统测试</h2>
+            <button onclick="testHealth()">健康检查</button>
+            <button onclick="getApiInfo()">API 信息</button>
+            <button onclick="checkConnection()">测试连接</button>
+            <div id="system-result"></div>
+        </div>
+        
+        <div class="section">
+            <h2>📝 创建任务</h2>
+            <form class="task-form" onsubmit="createTask(event)">
+                <div class="form-group">
+                    <label>任务标题</label>
+                    <input type="text" id="title" required>
+                </div>
+                <div class="form-group">
+                    <label>任务类型</label>
+                    <select id="type">
+                        <option value="task">任务</option>
+                        <option value="bug">Bug</option>
+                        <option value="requirement">需求</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>优先级</label>
+                    <select id="priority">
+                        <option value="urgent">紧急</option>
+                        <option value="high">高</option>
+                        <option value="medium" selected>中</option>
+                        <option value="low">低</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>状态</label>
+                    <select id="status">
+                        <option value="pending">待处理</option>
+                        <option value="in_progress">进行中</option>
+                        <option value="completed">已完成</option>
+                    </select>
+                </div>
+                <div class="form-group full-width">
+                    <label>描述</label>
+                    <textarea id="description"></textarea>
+                </div>
+                <div class="form-group full-width">
+                    <button type="submit">创建任务</button>
+                </div>
+            </form>
+        </div>
+        
+        <div class="section">
+            <h2>📋 任务列表</h2>
+            <button onclick="getTasks()">刷新列表</button>
+            <button onclick="clearTasks()" class="danger">清空显示</button>
+            <div id="task-list" class="task-list"></div>
+        </div>
+        
+        <div class="section">
+            <h2>🔍 API 响应</h2>
+            <pre id="result">等待操作...</pre>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+        let isOnline = false;
+        
+        // 页面加载时检查连接
+        window.onload = () => {
+            checkConnection();
+            getTasks();
+        };
+        
+        // 更新在线状态
+        function updateStatus(online) {
+            isOnline = online;
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = online ? '在线' : '离线';
+            statusEl.className = `status ${online ? 'online' : 'offline'}`;
+        }
+        
+        // 显示结果
+        function showResult(data, targetId = 'result') {
+            document.getElementById(targetId).textContent = 
+                typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+        }
+        
+        // 检查连接
+        async function checkConnection() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                updateStatus(true);
+                showResult('✅ 后端服务正常运行', 'system-result');
+            } catch (error) {
+                updateStatus(false);
+                showResult('❌ 无法连接到后端服务，请确保后端正在运行', 'system-result');
+            }
+        }
+        
+        // 健康检查
+        async function testHealth() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                showResult(data);
+            } catch (error) {
+                showResult(`错误: ${error.message}`);
+            }
+        }
+        
+        // API 信息
+        async function getApiInfo() {
+            try {
+                const response = await fetch(`${API_BASE}/api`);
+                const data = await response.json();
+                showResult(data);
+            } catch (error) {
+                showResult(`错误: ${error.message}`);
+            }
+        }
+        
+        // 获取任务列表
+        async function getTasks() {
+            try {
+                showResult('加载中...');
+                const response = await fetch(`${API_BASE}/api/tasks`);
+                const data = await response.json();
+                showResult(data);
+                displayTasks(data.tasks || []);
+            } catch (error) {
+                showResult(`错误: ${error.message}`);
+            }
+        }
+        
+        // 创建任务
+        async function createTask(event) {
+            event.preventDefault();
+            
+            const task = {
+                title: document.getElementById('title').value,
+                type: document.getElementById('type').value,
+                priority: document.getElementById('priority').value,
+                status: document.getElementById('status').value,
+                description: document.getElementById('description').value
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/tasks`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(task)
+                });
+                
+                const data = await response.json();
+                showResult(data);
+                
+                if (response.ok) {
+                    // 清空表单
+                    document.getElementById('title').value = '';
+                    document.getElementById('description').value = '';
+                    // 刷新列表
+                    getTasks();
+                }
+            } catch (error) {
+                showResult(`错误: ${error.message}`);
+            }
+        }
+        
+        // 显示任务列表
+        function displayTasks(tasks) {
+            const listEl = document.getElementById('task-list');
+            
+            if (tasks.length === 0) {
+                listEl.innerHTML = '<div class="loading">暂无任务</div>';
+                return;
+            }
+            
+            listEl.innerHTML = tasks.map(task => `
+                <div class="task-item">
+                    <div class="task-info">
+                        <div class="task-title">${task.title}</div>
+                        <div class="task-meta">
+                            <span class="badge ${task.type}">${task.type}</span>
+                            <span class="badge ${task.priority}">${task.priority}</span>
+                            <span>状态: ${task.status}</span>
+                            <span>创建时间: ${new Date(task.createdAt || task.created_at).toLocaleString()}</span>
+                        </div>
+                        ${task.description ? `<div style="margin-top: 5px; font-size: 13px; color: #777;">${task.description}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // 清空任务显示
+        function clearTasks() {
+            document.getElementById('task-list').innerHTML = '';
+            showResult('任务列表已清空（仅清空显示，不删除数据）');
+        }
+    </script>
+</body>
+</html>
