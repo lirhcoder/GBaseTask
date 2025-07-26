@@ -1,10 +1,12 @@
 const Bug = require('../models/Bug');
 const Requirement = require('../models/Requirement');
 const Task = require('../models/Task');
+const LarkNotificationService = require('./larkNotification');
 
 class TaskSystem {
   constructor(larkClient) {
     this.larkClient = larkClient;
+    this.notificationService = new LarkNotificationService(larkClient);
   }
 
   async syncBugsToTasks() {
@@ -128,7 +130,7 @@ class TaskSystem {
     return results;
   }
 
-  async createTask(taskData) {
+  async createTask(taskData, creator = null) {
     const task = new Task({
       ...taskData,
       id: taskData.id || this.generateTaskId(),
@@ -144,16 +146,26 @@ class TaskSystem {
       await this.updateRequirementInLark(task);
     }
     
+    // 发送创建通知
+    if (creator && this.notificationService) {
+      try {
+        await this.notificationService.notifyTaskCreated(task, creator);
+      } catch (error) {
+        console.error('发送任务创建通知失败:', error);
+      }
+    }
+    
     return task;
   }
 
-  async updateTaskStatus(taskId, newStatus) {
+  async updateTaskStatus(taskId, newStatus, updater = null) {
     const task = await Task.findOne({ id: taskId });
     
     if (!task) {
       throw new Error('任务不存在');
     }
 
+    const oldStatus = task.status;
     task.updateStatus(newStatus);
     await task.save();
 
@@ -161,6 +173,15 @@ class TaskSystem {
       await this.updateBugInLark(task);
     } else if (task.sourceType === 'lark_requirement') {
       await this.updateRequirementInLark(task);
+    }
+
+    // 发送状态更新通知
+    if (updater && this.notificationService && oldStatus !== newStatus) {
+      try {
+        await this.notificationService.notifyTaskStatusUpdate(task, oldStatus, newStatus, updater);
+      } catch (error) {
+        console.error('发送状态更新通知失败:', error);
+      }
     }
 
     return task;
@@ -234,13 +255,14 @@ class TaskSystem {
     return await Task.findOne({ id: taskId });
   }
 
-  async updateTask(taskId, updates) {
+  async updateTask(taskId, updates, updater = null) {
     const task = await Task.findOne({ id: taskId });
     
     if (!task) {
       throw new Error('任务不存在');
     }
 
+    const oldAssignee = task.assignee;
     Object.assign(task, updates, { updatedAt: new Date() });
     await task.save();
 
@@ -248,6 +270,17 @@ class TaskSystem {
       await this.updateBugInLark(task);
     } else if (task.sourceType === 'lark_requirement') {
       await this.updateRequirementInLark(task);
+    }
+
+    // 如果负责人变更，发送分配通知
+    if (updater && this.notificationService && updates.assignee && updates.assignee !== oldAssignee) {
+      try {
+        // 这里需要获取被分配人的用户信息
+        const assigneeUser = { displayName: updates.assignee, larkUserId: null }; // 简化处理
+        await this.notificationService.notifyTaskAssigned(task, assigneeUser, updater);
+      } catch (error) {
+        console.error('发送任务分配通知失败:', error);
+      }
     }
 
     return task;

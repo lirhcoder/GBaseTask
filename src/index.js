@@ -8,10 +8,13 @@ const { connectDatabase } = require('./utils/database');
 const LarkTableClient = require('./services/larkClient');
 const TaskSystem = require('./services/taskSystem');
 const SyncService = require('./services/syncService');
+const ReminderService = require('./services/reminderService');
 
 // 导入路由
 const { router: tasksRouter, setTaskSystem } = require('./routes/tasks');
 const { router: syncRouter, setSyncService } = require('./routes/sync');
+const authRouter = require('./routes/auth');
+const usersRouter = require('./routes/users');
 
 // 初始化 Express 应用
 const app = express();
@@ -48,6 +51,8 @@ app.get('/api', (req, res) => {
     version: '1.0.0',
     endpoints: {
       health: '/health',
+      auth: '/api/auth',
+      users: '/api/users',
       tasks: '/api/tasks',
       sync: '/api/sync',
       statistics: '/api/tasks/statistics'
@@ -59,6 +64,7 @@ app.get('/api', (req, res) => {
 let larkClient = null;
 let taskSystem = null;
 let syncService = null;
+let reminderService = null;
 
 async function initializeServices() {
   try {
@@ -90,6 +96,15 @@ async function initializeServices() {
       console.log('自动同步服务已启动');
     }
     
+    // 初始化提醒服务
+    if (taskSystem.notificationService) {
+      reminderService = new ReminderService(taskSystem.notificationService);
+      if (process.env.ENABLE_REMINDERS !== 'false') {
+        reminderService.start();
+        console.log('任务提醒服务已启动');
+      }
+    }
+    
     console.log('所有服务初始化完成');
   } catch (error) {
     console.error('服务初始化失败:', error);
@@ -98,6 +113,8 @@ async function initializeServices() {
 }
 
 // 注册路由
+app.use('/api/auth', authRouter);
+app.use('/api/users', usersRouter);
 app.use('/api/tasks', tasksRouter);
 app.use('/api/sync', syncRouter);
 
@@ -128,6 +145,10 @@ process.on('SIGINT', async () => {
   
   if (syncService) {
     syncService.stop();
+  }
+  
+  if (reminderService) {
+    reminderService.stop();
   }
   
   if (mongoose.connection.readyState === 1) {

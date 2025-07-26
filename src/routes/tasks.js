@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { authenticate, authorize, optionalAuth } = require('../middleware/auth');
 
 let taskSystem = null;
 
@@ -7,7 +8,7 @@ const setTaskSystem = (ts) => {
   taskSystem = ts;
 };
 
-router.get('/', async (req, res) => {
+router.get('/', optionalAuth, async (req, res) => {
   try {
     const { status, priority, assignee, type, page = 1, limit = 20 } = req.query;
     
@@ -62,9 +63,9 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', authenticate, authorize('tasks', 'create'), async (req, res) => {
   try {
-    const task = await taskSystem.createTask(req.body);
+    const task = await taskSystem.createTask(req.body, req.user);
     res.status(201).json(task);
   } catch (error) {
     console.error('创建任务失败:', error);
@@ -72,9 +73,9 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticate, authorize('tasks', 'update'), async (req, res) => {
   try {
-    const task = await taskSystem.updateTask(req.params.id, req.body);
+    const task = await taskSystem.updateTask(req.params.id, req.body, req.user);
     res.json(task);
   } catch (error) {
     console.error('更新任务失败:', error);
@@ -82,14 +83,14 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-router.put('/:id/status', async (req, res) => {
+router.put('/:id/status', authenticate, authorize('tasks', 'update'), async (req, res) => {
   try {
     const { status } = req.body;
     if (!status) {
       return res.status(400).json({ error: '状态不能为空' });
     }
     
-    const task = await taskSystem.updateTaskStatus(req.params.id, status);
+    const task = await taskSystem.updateTaskStatus(req.params.id, status, req.user);
     res.json(task);
   } catch (error) {
     console.error('更新任务状态失败:', error);
@@ -97,7 +98,7 @@ router.put('/:id/status', async (req, res) => {
   }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticate, authorize('tasks', 'delete'), async (req, res) => {
   try {
     const result = await taskSystem.deleteTask(req.params.id);
     res.json(result);

@@ -6,6 +6,7 @@ class SyncService {
     this.syncJob = null;
     this.syncHistory = [];
     this.maxHistorySize = 100;
+    this.notificationService = taskSystem.notificationService;
   }
 
   start(cronExpression = '0 */30 * * * *') {
@@ -46,6 +47,15 @@ class SyncService {
       console.log(`总计同步: ${result.total.synced} 条记录`);
       console.log(`错误: ${result.total.errors} 条`);
       console.log(`耗时: ${duration}ms`);
+      
+      // 发送同步完成通知
+      if (this.notificationService) {
+        try {
+          await this.notificationService.notifySyncCompleted(result);
+        } catch (error) {
+          console.error('发送同步通知失败:', error);
+        }
+      }
       
       return syncRecord;
     } catch (error) {
