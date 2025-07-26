@@ -260,7 +260,9 @@
     </div>
 
     <script>
-        const API_BASE = 'http://localhost:3000';
+        // 支持自定义端口，默认 3001
+        const customPort = localStorage.getItem('apiPort') || '3001';
+        const API_BASE = `http://localhost:${customPort}/api`;
         let isOnline = false;
         
         // 页面加载时检查连接

@@ -423,7 +423,9 @@
     </div>
     
     <script>
-        const API_BASE = 'http://localhost:3001/api';
+        // 支持自定义端口，默认 3001
+        const customPort = localStorage.getItem('apiPort') || '3001';
+        const API_BASE = `http://localhost:${customPort}/api`;
         let authToken = localStorage.getItem('authToken');
         let currentUser = null;
         

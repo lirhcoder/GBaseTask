@@ -124,7 +124,12 @@ app.use((req, res) => {
 });
 
 // 启动服务器
-const PORT = process.env.PORT || 3000;
+// 支持通过命令行参数指定端口：npm start -- --port 3002
+const args = process.argv.slice(2);
+const portIndex = args.indexOf('--port');
+const PORT = portIndex !== -1 && args[portIndex + 1] 
+  ? parseInt(args[portIndex + 1]) 
+  : process.env.PORT || 3001;
 
 // 引入 mongoose 用于健康检查
 const mongoose = require('mongoose');

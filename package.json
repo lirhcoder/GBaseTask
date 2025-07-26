@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node src/index-sqlite.js",
     "start:mongodb": "node src/index.js",
+    "start:port": "node start-port.js",
     "dev": "nodemon src/index-sqlite.js",
     "dev:mongodb": "nodemon src/index.js",
     "test": "jest",
