@@ -79,8 +79,16 @@ async function startServer() {
     // 连接数据库
     await connectDatabase();
     
-    // 创建默认用户（如果不存在）
+    // 确保模型已加载
     const User = require('./models/User-sqlite');
+    const Task = require('./models/Task-sqlite');
+    
+    // 强制同步所有模型（创建表）
+    await User.sync({ alter: true });
+    await Task.sync({ alter: true });
+    console.log('数据库表创建/更新完成');
+    
+    // 创建默认用户（如果不存在）
     const defaultUser = await User.findOne({ where: { username: 'admin' } });
     if (!defaultUser) {
       await User.create({
