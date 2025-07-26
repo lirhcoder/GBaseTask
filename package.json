@@ -4,8 +4,10 @@
   "description": "基于 Lark 多维表格的任务管理系统",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js",
+    "start": "node src/index-sqlite.js",
+    "start:mongodb": "node src/index.js",
+    "dev": "nodemon src/index-sqlite.js",
+    "dev:mongodb": "nodemon src/index.js",
     "test": "jest",
     "lint": "eslint src/",
     "migrate": "node scripts/migrate.js"
@@ -29,6 +31,8 @@
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^7.0.0",
     "node-cron": "^3.0.0",
+    "sequelize": "^6.37.7",
+    "sqlite3": "^5.1.7",
     "winston": "^3.8.0"
   },
   "devDependencies": {

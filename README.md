@@ -6,8 +6,8 @@
 
 1. 克隆项目并安装依赖
 ```bash
-git clone <your-repo-url>
-cd lark-task
+git clone https://github.com/lirhcoder/GBaseTask.git
+cd GBaseTask
 npm install
 ```
 
@@ -17,9 +17,14 @@ cp .env.example .env
 # 编辑 .env 文件，填入你的 Lark 应用凭证
 ```
 
-3. 启动开发服务器
+3. 启动服务器（SQLite 版本，无需安装数据库）
 ```bash
-npm run dev
+npm start
+```
+
+或使用 MongoDB 版本（需要先安装 MongoDB）：
+```bash
+npm run start:mongodb
 ```
 
 ## 功能特性
