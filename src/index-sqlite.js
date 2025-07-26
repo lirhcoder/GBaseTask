@@ -6,6 +6,18 @@ const bodyParser = require('body-parser');
 // 导入数据库连接
 const { connectDatabase } = require('./utils/database-sqlite');
 
+// 导入服务
+const LarkClient = require('./services/larkClient');
+const TaskSystem = require('./services/taskSystem');
+const SyncService = require('./services/syncService');
+const ReminderService = require('./services/reminderService');
+
+// 导入路由
+const { router: tasksRouter, setTaskSystem } = require('./routes/tasks');
+const { router: syncRouter, setSyncService } = require('./routes/sync');
+const authRouter = require('./routes/auth');
+const usersRouter = require('./routes/users');
+
 // 初始化 Express 应用
 const app = express();
 app.use(cors());
@@ -35,36 +47,11 @@ app.get('/api', (req, res) => {
   });
 });
 
-// 示例任务接口（简化版）
-app.get('/api/tasks', async (req, res) => {
-  try {
-    const Task = require('./models/Task-sqlite');
-    const tasks = await Task.findAll({
-      limit: 20,
-      order: [['createdAt', 'DESC']]
-    });
-    res.json({
-      tasks,
-      total: await Task.count()
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// 创建任务
-app.post('/api/tasks', async (req, res) => {
-  try {
-    const Task = require('./models/Task-sqlite');
-    const task = await Task.create({
-      ...req.body,
-      id: `task_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    });
-    res.status(201).json(task);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+// 注册路由
+app.use('/api/auth', authRouter);
+app.use('/api/tasks', tasksRouter);
+app.use('/api/sync', syncRouter);
+app.use('/api/users', usersRouter);
 
 // 404 处理
 app.use((req, res) => {
@@ -92,6 +79,28 @@ async function startServer() {
     await User.sync({ alter: true });
     await Task.sync({ alter: true });
     console.log('数据库表创建/更新完成');
+    
+    // 初始化服务
+    console.log('正在初始化服务...');
+    
+    // 初始化 Lark 客户端
+    const larkClient = new LarkClient(
+      process.env.LARK_APP_ID,
+      process.env.LARK_APP_SECRET
+    );
+    
+    // 初始化任务系统
+    const taskSystem = new TaskSystem();
+    setTaskSystem(taskSystem);
+    
+    // 初始化同步服务
+    const syncService = new SyncService(larkClient, taskSystem);
+    setSyncService(syncService);
+    
+    // 初始化提醒服务
+    const reminderService = new ReminderService(taskSystem);
+    
+    console.log('服务初始化完成');
     
     // 创建默认用户（如果不存在）
     const defaultUser = await User.findOne({ where: { username: 'admin' } });
