@@ -8,12 +8,18 @@ class LarkTableClient {
   }
 
   async initialize() {
+    // 检测是否为国际版（通过环境变量或 APP ID 前缀）
+    const isInternational = process.env.LARK_INTERNATIONAL === 'true' || 
+                           this.appId.startsWith('cli_');
+    
     this.client = new lark.Client({
       appId: this.appId,
       appSecret: this.appSecret,
       appType: lark.AppType.SelfBuild,
-      domain: lark.Domain.Feishu,
+      domain: isInternational ? lark.Domain.Lark : lark.Domain.Feishu,
     });
+    
+    console.log(`初始化 Lark 客户端 - ${isInternational ? '国际版' : '中国版'}`);
   }
 
   async getTableRecords(appToken, tableId, viewId = null) {
