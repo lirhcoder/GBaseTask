@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lark 数据同步测试 - Bug和需求一览</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: normal;
+        }
+        
+        .status.online {
+            background-color: #4caf50;
+            color: white;
+        }
+        
+        .status.offline {
+            background-color: #f44336;
+            color: white;
+        }
+        
+        .auth-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .auth-info {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .sync-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #1976D2;
+        }
+        
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        button.success {
+            background-color: #4caf50;
+        }
+        
+        button.danger {
+            background-color: #f44336;
+        }
+        
+        .data-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .data-section {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .data-panel {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .data-panel h2 {
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .count-badge {
+            background-color: #2196F3;
+            color: white;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+        
+        .data-list {
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+        }
+        
+        .data-item {
+            padding: 15px;
+            border-bottom: 1px solid #e0e0e0;
+            transition: background-color 0.2s;
+        }
+        
+        .data-item:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .data-item:last-child {
+            border-bottom: none;
+        }
+        
+        .item-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .item-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 13px;
+            color: #666;
+            flex-wrap: wrap;
+        }
+        
+        .meta-item {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        
+        .status-badge.open {
+            background-color: #ff9800;
+            color: white;
+        }
+        
+        .status-badge.in-progress {
+            background-color: #2196F3;
+            color: white;
+        }
+        
+        .status-badge.closed {
+            background-color: #4caf50;
+            color: white;
+        }
+        
+        .priority-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        
+        .priority-badge.high {
+            background-color: #f44336;
+            color: white;
+        }
+        
+        .priority-badge.medium {
+            background-color: #ff9800;
+            color: white;
+        }
+        
+        .priority-badge.low {
+            background-color: #4caf50;
+            color: white;
+        }
+        
+        .log-section {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .log-content {
+            background-color: #f5f5f5;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        
+        .log-entry {
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .log-entry:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        
+        .log-time {
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .log-message {
+            margin-top: 5px;
+        }
+        
+        .log-error {
+            color: #f44336;
+        }
+        
+        .log-success {
+            color: #4caf50;
+        }
+        
+        .log-info {
+            color: #2196F3;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #2196F3;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        input[type="text"], input[type="password"] {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .alert {
+            padding: 10px 15px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+        
+        .alert.info {
+            background-color: #e3f2fd;
+            color: #1976d2;
+            border: 1px solid #bbdefb;
+        }
+        
+        .alert.error {
+            background-color: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
+        
+        .alert.success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            Lark 数据同步测试
+            <span id="serverStatus" class="status offline">离线</span>
+        </h1>
+        
+        <!-- 认证信息 -->
+        <div class="auth-section">
+            <h3>认证信息</h3>
+            <div class="auth-info">
+                <span id="authStatus">未登录</span>
+                <span id="username"></span>
+            </div>
+            <div class="input-group">
+                <input type="text" id="loginUsername" placeholder="用户名">
+                <input type="password" id="loginPassword" placeholder="密码">
+                <button onclick="login()">登录</button>
+                <button onclick="register()">注册</button>
+                <button onclick="logout()" style="display:none;" id="logoutBtn">退出</button>
+            </div>
+            <div id="authMessage"></div>
+        </div>
+        
+        <!-- 同步控制 -->
+        <div class="sync-section">
+            <h3>同步控制</h3>
+            <div class="button-group">
+                <button onclick="syncBugs()" id="syncBugsBtn">
+                    从 Lark 同步 Bug 数据
+                </button>
+                <button onclick="syncRequirements()" id="syncReqBtn">
+                    从 Lark 同步需求数据
+                </button>
+                <button onclick="syncAll()" id="syncAllBtn" class="success">
+                    同步所有数据（Bug + 需求）
+                </button>
+                <button onclick="getSyncStatus()">
+                    查看同步状态
+                </button>
+                <button onclick="getSyncHistory()">
+                    查看同步历史
+                </button>
+                <button onclick="clearLog()" class="danger">
+                    清空日志
+                </button>
+            </div>
+        </div>
+        
+        <!-- 数据展示 -->
+        <div class="data-section">
+            <!-- Bug 一览 -->
+            <div class="data-panel">
+                <h2>
+                    Bug 一览
+                    <span class="count-badge" id="bugCount">0</span>
+                </h2>
+                <div class="data-list" id="bugList">
+                    <div style="padding: 20px; text-align: center; color: #999;">
+                        暂无数据，请先同步
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 需求一览 -->
+            <div class="data-panel">
+                <h2>
+                    需求一览
+                    <span class="count-badge" id="reqCount">0</span>
+                </h2>
+                <div class="data-list" id="reqList">
+                    <div style="padding: 20px; text-align: center; color: #999;">
+                        暂无数据，请先同步
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 日志输出 -->
+        <div class="log-section">
+            <h3>操作日志</h3>
+            <div class="log-content" id="logContent">
+                <div class="log-entry">
+                    <div class="log-time">等待操作...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = 'http://localhost:3001/api';
+        let authToken = localStorage.getItem('authToken');
+        let currentUser = null;
+        
+        // 检查服务器状态
+        async function checkServerStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/tasks`, {
+                    headers: {
+                        'Authorization': authToken || ''
+                    }
+                });
+                
+                const statusEl = document.getElementById('serverStatus');
+                if (response.ok || response.status === 401) {
+                    statusEl.textContent = '在线';
+                    statusEl.className = 'status online';
+                    if (authToken) {
+                        await checkAuth();
+                    }
+                } else {
+                    statusEl.textContent = '离线';
+                    statusEl.className = 'status offline';
+                }
+            } catch (error) {
+                document.getElementById('serverStatus').textContent = '离线';
+                document.getElementById('serverStatus').className = 'status offline';
+                addLog('无法连接到服务器，请确保后端服务运行在 http://localhost:3001', 'error');
+            }
+        }
+        
+        // 检查认证状态
+        async function checkAuth() {
+            if (!authToken) {
+                updateAuthUI(false);
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/me`, {
+                    headers: {
+                        'Authorization': authToken
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    currentUser = data.user;
+                    updateAuthUI(true);
+                } else {
+                    localStorage.removeItem('authToken');
+                    authToken = null;
+                    updateAuthUI(false);
+                }
+            } catch (error) {
+                updateAuthUI(false);
+            }
+        }
+        
+        // 更新认证UI
+        function updateAuthUI(isLoggedIn) {
+            const authStatus = document.getElementById('authStatus');
+            const username = document.getElementById('username');
+            const logoutBtn = document.getElementById('logoutBtn');
+            
+            if (isLoggedIn && currentUser) {
+                authStatus.textContent = '已登录';
+                authStatus.style.color = '#4caf50';
+                username.textContent = `用户: ${currentUser.username}`;
+                logoutBtn.style.display = 'inline-block';
+                enableSyncButtons(true);
+            } else {
+                authStatus.textContent = '未登录';
+                authStatus.style.color = '#f44336';
+                username.textContent = '';
+                logoutBtn.style.display = 'none';
+                enableSyncButtons(false);
+            }
+        }
+        
+        // 启用/禁用同步按钮
+        function enableSyncButtons(enable) {
+            document.getElementById('syncBugsBtn').disabled = !enable;
+            document.getElementById('syncReqBtn').disabled = !enable;
+            document.getElementById('syncAllBtn').disabled = !enable;
+        }
+        
+        // 登录
+        async function login() {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!username || !password) {
+                showAuthMessage('请输入用户名和密码', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    authToken = data.token;
+                    localStorage.setItem('authToken', authToken);
+                    currentUser = data.user;
+                    updateAuthUI(true);
+                    showAuthMessage('登录成功', 'success');
+                    addLog(`用户 ${username} 登录成功`, 'success');
+                    
+                    // 清空输入框
+                    document.getElementById('loginUsername').value = '';
+                    document.getElementById('loginPassword').value = '';
+                } else {
+                    showAuthMessage(data.error || '登录失败', 'error');
+                }
+            } catch (error) {
+                showAuthMessage('登录失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 注册
+        async function register() {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            if (!username || !password) {
+                showAuthMessage('请输入用户名和密码', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showAuthMessage('注册成功，请登录', 'success');
+                    addLog(`用户 ${username} 注册成功`, 'success');
+                } else {
+                    showAuthMessage(data.error || '注册失败', 'error');
+                }
+            } catch (error) {
+                showAuthMessage('注册失败: ' + error.message, 'error');
+            }
+        }
+        
+        // 退出登录
+        function logout() {
+            localStorage.removeItem('authToken');
+            authToken = null;
+            currentUser = null;
+            updateAuthUI(false);
+            showAuthMessage('已退出登录', 'info');
+            addLog('用户已退出登录', 'info');
+        }
+        
+        // 显示认证消息
+        function showAuthMessage(message, type = 'info') {
+            const messageEl = document.getElementById('authMessage');
+            messageEl.className = `alert ${type}`;
+            messageEl.textContent = message;
+            setTimeout(() => {
+                messageEl.textContent = '';
+                messageEl.className = '';
+            }, 3000);
+        }
+        
+        // 同步 Bug 数据
+        async function syncBugs() {
+            if (!authToken) {
+                addLog('请先登录', 'error');
+                return;
+            }
+            
+            const btn = document.getElementById('syncBugsBtn');
+            btn.disabled = true;
+            btn.innerHTML = '同步中... <span class="loading"></span>';
+            
+            addLog('开始从 Lark 同步 Bug 数据...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/sync/bugs`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': authToken
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    addLog(`Bug 同步成功！处理了 ${result.processed || 0} 条记录`, 'success');
+                    if (result.details) {
+                        addLog(`详情: ${JSON.stringify(result.details)}`, 'info');
+                    }
+                    // 重新加载任务列表
+                    await loadTasks();
+                } else {
+                    const error = await response.json();
+                    addLog(`Bug 同步失败: ${error.error}`, 'error');
+                }
+            } catch (error) {
+                addLog(`Bug 同步失败: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '从 Lark 同步 Bug 数据';
+            }
+        }
+        
+        // 同步需求数据
+        async function syncRequirements() {
+            if (!authToken) {
+                addLog('请先登录', 'error');
+                return;
+            }
+            
+            const btn = document.getElementById('syncReqBtn');
+            btn.disabled = true;
+            btn.innerHTML = '同步中... <span class="loading"></span>';
+            
+            addLog('开始从 Lark 同步需求数据...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/sync/requirements`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': authToken
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    addLog(`需求同步成功！处理了 ${result.processed || 0} 条记录`, 'success');
+                    if (result.details) {
+                        addLog(`详情: ${JSON.stringify(result.details)}`, 'info');
+                    }
+                    // 重新加载任务列表
+                    await loadTasks();
+                } else {
+                    const error = await response.json();
+                    addLog(`需求同步失败: ${error.error}`, 'error');
+                }
+            } catch (error) {
+                addLog(`需求同步失败: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '从 Lark 同步需求数据';
+            }
+        }
+        
+        // 同步所有数据
+        async function syncAll() {
+            if (!authToken) {
+                addLog('请先登录', 'error');
+                return;
+            }
+            
+            const btn = document.getElementById('syncAllBtn');
+            btn.disabled = true;
+            btn.innerHTML = '同步中... <span class="loading"></span>';
+            
+            addLog('开始从 Lark 同步所有数据...', 'info');
+            
+            try {
+                const response = await fetch(`${API_BASE}/sync/manual`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': authToken
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    addLog('数据同步成功！', 'success');
+                    if (result.bugs) {
+                        addLog(`Bug: 处理了 ${result.bugs.processed || 0} 条记录`, 'success');
+                    }
+                    if (result.requirements) {
+                        addLog(`需求: 处理了 ${result.requirements.processed || 0} 条记录`, 'success');
+                    }
+                    // 重新加载任务列表
+                    await loadTasks();
+                } else {
+                    const error = await response.json();
+                    addLog(`数据同步失败: ${error.error}`, 'error');
+                }
+            } catch (error) {
+                addLog(`数据同步失败: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '同步所有数据（Bug + 需求）';
+            }
+        }
+        
+        // 获取同步状态
+        async function getSyncStatus() {
+            if (!authToken) {
+                addLog('请先登录', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/sync/status`, {
+                    headers: {
+                        'Authorization': authToken
+                    }
+                });
+                
+                if (response.ok) {
+                    const status = await response.json();
+                    addLog('同步状态:', 'info');
+                    addLog(JSON.stringify(status, null, 2), 'info');
+                } else {
+                    const error = await response.json();
+                    addLog(`获取状态失败: ${error.error}`, 'error');
+                }
+            } catch (error) {
+                addLog(`获取状态失败: ${error.message}`, 'error');
+            }
+        }
+        
+        // 获取同步历史
+        async function getSyncHistory() {
+            if (!authToken) {
+                addLog('请先登录', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/sync/history?limit=5`, {
+                    headers: {
+                        'Authorization': authToken
+                    }
+                });
+                
+                if (response.ok) {
+                    const history = await response.json();
+                    addLog('最近5次同步历史:', 'info');
+                    history.forEach((record, index) => {
+                        addLog(`${index + 1}. ${new Date(record.timestamp).toLocaleString()} - ${record.status}`, 'info');
+                    });
+                } else {
+                    const error = await response.json();
+                    addLog(`获取历史失败: ${error.error}`, 'error');
+                }
+            } catch (error) {
+                addLog(`获取历史失败: ${error.message}`, 'error');
+            }
+        }
+        
+        // 加载任务列表
+        async function loadTasks() {
+            if (!authToken) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/tasks`, {
+                    headers: {
+                        'Authorization': authToken
+                    }
+                });
+                
+                if (response.ok) {
+                    const tasks = await response.json();
+                    
+                    // 分离 Bug 和需求
+                    const bugs = tasks.filter(task => task.type === 'bug');
+                    const requirements = tasks.filter(task => task.type === 'requirement');
+                    
+                    // 更新 Bug 列表
+                    updateBugList(bugs);
+                    
+                    // 更新需求列表
+                    updateRequirementList(requirements);
+                    
+                    addLog(`加载成功: ${bugs.length} 个 Bug, ${requirements.length} 个需求`, 'success');
+                } else {
+                    addLog('加载任务失败', 'error');
+                }
+            } catch (error) {
+                addLog(`加载任务失败: ${error.message}`, 'error');
+            }
+        }
+        
+        // 更新 Bug 列表
+        function updateBugList(bugs) {
+            const bugList = document.getElementById('bugList');
+            const bugCount = document.getElementById('bugCount');
+            
+            bugCount.textContent = bugs.length;
+            
+            if (bugs.length === 0) {
+                bugList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">暂无 Bug 数据</div>';
+                return;
+            }
+            
+            bugList.innerHTML = bugs.map(bug => `
+                <div class="data-item">
+                    <div class="item-title">${escapeHtml(bug.title)}</div>
+                    <div class="item-meta">
+                        <div class="meta-item">
+                            <span>状态:</span>
+                            <span class="status-badge ${getStatusClass(bug.status)}">${bug.status}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span>优先级:</span>
+                            <span class="priority-badge ${bug.priority}">${getPriorityText(bug.priority)}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span>负责人:</span>
+                            <span>${bug.assignee || '未分配'}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span>Lark ID:</span>
+                            <span>${bug.larkId || 'N/A'}</span>
+                        </div>
+                    </div>
+                    ${bug.description ? `<div style="margin-top: 10px; color: #666; font-size: 13px;">${escapeHtml(bug.description)}</div>` : ''}
+                </div>
+            `).join('');
+        }
+        
+        // 更新需求列表
+        function updateRequirementList(requirements) {
+            const reqList = document.getElementById('reqList');
+            const reqCount = document.getElementById('reqCount');
+            
+            reqCount.textContent = requirements.length;
+            
+            if (requirements.length === 0) {
+                reqList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">暂无需求数据</div>';
+                return;
+            }
+            
+            reqList.innerHTML = requirements.map(req => `
+                <div class="data-item">
+                    <div class="item-title">${escapeHtml(req.title)}</div>
+                    <div class="item-meta">
+                        <div class="meta-item">
+                            <span>状态:</span>
+                            <span class="status-badge ${getStatusClass(req.status)}">${req.status}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span>优先级:</span>
+                            <span class="priority-badge ${req.priority}">${getPriorityText(req.priority)}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span>负责人:</span>
+                            <span>${req.assignee || '未分配'}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span>Lark ID:</span>
+                            <span>${req.larkId || 'N/A'}</span>
+                        </div>
+                    </div>
+                    ${req.description ? `<div style="margin-top: 10px; color: #666; font-size: 13px;">${escapeHtml(req.description)}</div>` : ''}
+                </div>
+            `).join('');
+        }
+        
+        // 获取状态样式类
+        function getStatusClass(status) {
+            switch (status) {
+                case 'open':
+                case '待处理':
+                    return 'open';
+                case 'in_progress':
+                case '进行中':
+                    return 'in-progress';
+                case 'closed':
+                case '已完成':
+                    return 'closed';
+                default:
+                    return 'open';
+            }
+        }
+        
+        // 获取优先级文本
+        function getPriorityText(priority) {
+            switch (priority) {
+                case 'high':
+                    return '高';
+                case 'medium':
+                    return '中';
+                case 'low':
+                    return '低';
+                default:
+                    return priority;
+            }
+        }
+        
+        // 添加日志
+        function addLog(message, type = 'info') {
+            const logContent = document.getElementById('logContent');
+            const time = new Date().toLocaleTimeString();
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.innerHTML = `
+                <div class="log-time">[${time}]</div>
+                <div class="log-message log-${type}">${escapeHtml(message)}</div>
+            `;
+            
+            logContent.insertBefore(logEntry, logContent.firstChild);
+            
+            // 限制日志数量
+            while (logContent.children.length > 50) {
+                logContent.removeChild(logContent.lastChild);
+            }
+        }
+        
+        // 清空日志
+        function clearLog() {
+            const logContent = document.getElementById('logContent');
+            logContent.innerHTML = '<div class="log-entry"><div class="log-time">日志已清空</div></div>';
+        }
+        
+        // HTML 转义
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text ? text.replace(/[&<>"']/g, m => map[m]) : '';
+        }
+        
+        // 页面加载时初始化
+        window.onload = async function() {
+            await checkServerStatus();
+            setInterval(checkServerStatus, 5000); // 每5秒检查一次服务器状态
+            
+            if (authToken) {
+                await loadTasks();
+            }
+        };
+    </script>
+</body>
+</html>
