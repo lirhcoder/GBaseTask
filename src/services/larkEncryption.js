@@ -3,8 +3,14 @@ const { AESCipher } = require('@larksuiteoapi/node-sdk');
 
 class LarkEncryption {
   constructor(encryptKey) {
-    // Lark 使用 App Secret 作为加密密钥
-    this.encryptKey = encryptKey || process.env.LARK_APP_SECRET;
+    // Lark 使用单独的 Encrypt Key 或 Verification Token
+    this.encryptKey = encryptKey || 
+                      process.env.LARK_ENCRYPT_KEY || 
+                      process.env.LARK_VERIFICATION_TOKEN || 
+                      process.env.LARK_APP_SECRET;
+    
+    console.log('使用加密密钥:', this.encryptKey ? `${this.encryptKey.substring(0, 8)}...` : '未设置');
+    
     // 使用 Lark SDK 的 AESCipher
     this.aesCipher = new AESCipher(this.encryptKey);
   }
