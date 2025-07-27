@@ -22,7 +22,9 @@ class LarkOAuthService {
       app_id: this.appId,
       redirect_uri: this.redirectUri,
       state: state,
-      response_type: 'code'
+      response_type: 'code',
+      // 添加必要的权限范围
+      scope: 'contact:user.base:readonly contact:user.email:readonly'
     });
 
     // 使用正确的授权域名
@@ -39,6 +41,11 @@ class LarkOAuthService {
    */
   async getAccessToken(code) {
     try {
+      console.log('获取 App Access Token...');
+      const appAccessToken = await this.getAppAccessToken();
+      console.log('App Access Token 获取成功');
+      
+      console.log('使用授权码换取用户 token...');
       const response = await axios.post(
         `${this.baseURL}/open-apis/authen/v1/oidc/access_token`,
         {
@@ -48,12 +55,15 @@ class LarkOAuthService {
         {
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${await this.getAppAccessToken()}`
+            'Authorization': `Bearer ${appAccessToken}`
           }
         }
       );
 
+      console.log('Token 交换响应:', response.data);
+      
       if (response.data.code !== 0) {
+        console.error('Token 交换失败:', response.data);
         throw new Error(`获取访问令牌失败: ${response.data.msg}`);
       }
 
@@ -101,6 +111,9 @@ class LarkOAuthService {
    */
   async getUserInfo(userAccessToken) {
     try {
+      console.log('获取用户信息 API URL:', `${this.baseURL}/open-apis/authen/v1/user_info`);
+      console.log('使用 access_token:', userAccessToken ? '已提供' : '未提供');
+      
       const response = await axios.get(
         `${this.baseURL}/open-apis/authen/v1/user_info`,
         {
@@ -110,13 +123,16 @@ class LarkOAuthService {
         }
       );
 
+      console.log('用户信息 API 响应:', response.data);
+      
       if (response.data.code !== 0) {
+        console.error('用户信息 API 返回错误:', response.data);
         throw new Error(`获取用户信息失败: ${response.data.msg}`);
       }
 
       return response.data.data;
     } catch (error) {
-      console.error('获取用户信息失败:', error);
+      console.error('获取用户信息失败 - 详细错误:', error.response?.data || error.message);
       throw error;
     }
   }

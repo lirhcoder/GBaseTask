@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Token 测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            background: #00C7B1;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background: #00A090;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>API Token 测试工具</h1>
+        
+        <h2>1. 获取 Token</h2>
+        <p>从 OAuth 登录获取的 token:</p>
+        <input type="text" id="token" placeholder="粘贴您的 token 到这里">
+        <button onclick="getStoredToken()">从本地存储获取 Token</button>
+        
+        <h2>2. 测试 API</h2>
+        <button onclick="testGetUserInfo()">测试 GET /api/auth/me</button>
+        <button onclick="testWithoutToken()">测试不带 Token 的请求</button>
+        
+        <h2>3. 结果</h2>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001';
+
+        function getStoredToken() {
+            const token = localStorage.getItem('token');
+            if (token) {
+                document.getElementById('token').value = token;
+                showResult('已从本地存储获取 token', 'success');
+            } else {
+                showResult('本地存储中没有 token，请先通过 OAuth 登录', 'error');
+            }
+        }
+
+        async function testGetUserInfo() {
+            const token = document.getElementById('token').value;
+            if (!token) {
+                showResult('请先输入或获取 token', 'error');
+                return;
+            }
+
+            try {
+                showResult('正在请求 /api/auth/me ...');
+                
+                const response = await fetch(`${API_BASE}/api/auth/me`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult(`成功！状态码: ${response.status}\n\n响应数据:\n${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    showResult(`失败！状态码: ${response.status}\n\n错误信息:\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult(`请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function testWithoutToken() {
+            try {
+                showResult('正在请求 /api/auth/me (不带 token)...');
+                
+                const response = await fetch(`${API_BASE}/api/auth/me`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                showResult(`状态码: ${response.status}\n\n响应:\n${JSON.stringify(data, null, 2)}`, response.ok ? 'success' : 'error');
+            } catch (error) {
+                showResult(`请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        function showResult(message, type = '') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = message;
+            resultDiv.className = type;
+        }
+
+        // 页面加载时自动尝试获取 token
+        window.onload = function() {
+            getStoredToken();
+        };
+    </script>
+</body>
+</html>

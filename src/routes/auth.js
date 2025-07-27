@@ -337,10 +337,18 @@ router.all('/oauth/lark/callback', async (req, res) => {
     );
     
     // 使用授权码换取访问令牌
+    console.log('OAuth 回调 - 使用授权码换取 token, code:', code);
     const tokenData = await oauthService.getAccessToken(code);
+    console.log('获取到 token 数据:', {
+      access_token: tokenData.access_token ? '已获取' : '未获取',
+      expires_in: tokenData.expire,
+      refresh_token: tokenData.refresh_token ? '已获取' : '未获取'
+    });
     
     // 获取用户信息
+    console.log('开始获取用户信息...');
     const larkUserInfo = await oauthService.getUserInfo(tokenData.access_token);
+    console.log('获取到用户信息:', larkUserInfo);
     
     // 查找或创建本地用户
     let user = await User.findOne({ larkUserId: larkUserInfo.user_id });
@@ -419,10 +427,18 @@ router.post('/oauth/lark', async (req, res) => {
     );
     
     // 使用授权码换取访问令牌
+    console.log('OAuth 回调 - 使用授权码换取 token, code:', code);
     const tokenData = await oauthService.getAccessToken(code);
+    console.log('获取到 token 数据:', {
+      access_token: tokenData.access_token ? '已获取' : '未获取',
+      expires_in: tokenData.expire,
+      refresh_token: tokenData.refresh_token ? '已获取' : '未获取'
+    });
     
     // 获取用户信息
+    console.log('开始获取用户信息...');
     const larkUserInfo = await oauthService.getUserInfo(tokenData.access_token);
+    console.log('获取到用户信息:', larkUserInfo);
     
     // 查找或创建本地用户
     let user = await User.findOne({ larkUserId: larkUserInfo.user_id });
