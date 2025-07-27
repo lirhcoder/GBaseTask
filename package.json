@@ -34,6 +34,7 @@
     "node-cron": "^3.0.0",
     "sequelize": "^6.37.7",
     "sqlite3": "^5.1.7",
+    "uuid": "^11.1.0",
     "winston": "^3.8.0"
   },
   "devDependencies": {

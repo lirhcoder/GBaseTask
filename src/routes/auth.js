@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { User } = require('../utils/model-adapter');
 const { authenticate, refreshAuth } = require('../middleware/auth');
+const LarkOAuthService = require('../services/larkOAuth');
 
 const router = express.Router();
 
@@ -257,25 +258,197 @@ router.put('/me/password', authenticate, [
   }
 });
 
-// OAuth 登录（飞书）
+// OAuth 状态存储（生产环境应使用 Redis 或数据库）
+const oauthStates = new Map();
+
+// 获取 OAuth 授权 URL
+router.get('/oauth/lark/authorize', (req, res) => {
+  try {
+    const oauthService = new LarkOAuthService(
+      process.env.LARK_APP_ID,
+      process.env.LARK_APP_SECRET
+    );
+    
+    const state = oauthService.generateState();
+    // 存储 state，5分钟后过期
+    oauthStates.set(state, {
+      timestamp: Date.now(),
+      returnUrl: req.query.returnUrl || '/'
+    });
+    
+    // 清理过期的 state
+    for (const [key, value] of oauthStates.entries()) {
+      if (Date.now() - value.timestamp > 5 * 60 * 1000) {
+        oauthStates.delete(key);
+      }
+    }
+    
+    const authUrl = oauthService.getAuthorizationURL(state);
+    res.json({ authUrl, state });
+  } catch (error) {
+    console.error('获取授权 URL 失败:', error);
+    res.status(500).json({ error: '获取授权 URL 失败' });
+  }
+});
+
+// OAuth 回调处理
+router.get('/oauth/lark/callback', async (req, res) => {
+  try {
+    const { code, state } = req.query;
+    
+    if (!code || !state) {
+      return res.status(400).json({ error: '缺少必要参数' });
+    }
+    
+    // 验证 state
+    const stateData = oauthStates.get(state);
+    if (!stateData) {
+      return res.status(400).json({ error: '无效的 state 参数' });
+    }
+    oauthStates.delete(state);
+    
+    const oauthService = new LarkOAuthService(
+      process.env.LARK_APP_ID,
+      process.env.LARK_APP_SECRET
+    );
+    
+    // 使用授权码换取访问令牌
+    const tokenData = await oauthService.getAccessToken(code);
+    
+    // 获取用户信息
+    const larkUserInfo = await oauthService.getUserInfo(tokenData.access_token);
+    
+    // 查找或创建本地用户
+    let user = await User.findOne({ larkUserId: larkUserInfo.user_id });
+    
+    if (!user) {
+      // 创建新用户
+      user = new User({
+        username: larkUserInfo.en_name || larkUserInfo.name || larkUserInfo.user_id,
+        email: larkUserInfo.email || `${larkUserInfo.user_id}@lark.user`,
+        displayName: larkUserInfo.name,
+        larkUserId: larkUserInfo.user_id,
+        larkAccessToken: tokenData.access_token,
+        larkRefreshToken: tokenData.refresh_token,
+        larkTokenExpiry: new Date(Date.now() + tokenData.expire * 1000),
+        avatar: larkUserInfo.avatar_url,
+        department: larkUserInfo.department_ids?.[0] || '',
+        role: 'user',
+        isActive: true
+      });
+      
+      // 设置随机密码（用户不会使用密码登录）
+      user.password = require('crypto').randomBytes(32).toString('hex');
+      
+      await user.save();
+    } else {
+      // 更新现有用户的 Lark 令牌
+      user.larkAccessToken = tokenData.access_token;
+      user.larkRefreshToken = tokenData.refresh_token;
+      user.larkTokenExpiry = new Date(Date.now() + tokenData.expire * 1000);
+      user.avatar = larkUserInfo.avatar_url;
+      await user.save();
+    }
+    
+    // 生成 JWT token
+    const token = user.generateAuthToken();
+    const refreshToken = user.generateRefreshToken();
+    
+    // 保存 refresh token
+    user.refreshToken = refreshToken;
+    await user.save();
+    
+    // 重定向到前端，带上 token
+    const returnUrl = stateData.returnUrl || '/';
+    const redirectUrl = new URL(returnUrl, process.env.FRONTEND_URL || 'http://localhost:5173');
+    redirectUrl.searchParams.set('token', token);
+    redirectUrl.searchParams.set('refreshToken', refreshToken);
+    
+    res.redirect(redirectUrl.toString());
+  } catch (error) {
+    console.error('OAuth 回调处理失败:', error);
+    res.status(500).json({ error: 'OAuth 认证失败' });
+  }
+});
+
+// 使用授权码登录（用于前端 AJAX 请求）
 router.post('/oauth/lark', async (req, res) => {
   try {
-    const { code } = req.body;
+    const { code, state } = req.body;
     
     if (!code) {
       return res.status(400).json({ error: '缺少授权码' });
     }
-
-    // TODO: 实现飞书 OAuth 登录逻辑
-    // 1. 使用 code 换取 access_token
-    // 2. 使用 access_token 获取用户信息
-    // 3. 创建或更新用户
-    // 4. 生成 JWT token
-
-    res.status(501).json({ error: '飞书登录功能正在开发中' });
+    
+    // 如果提供了 state，验证它
+    if (state) {
+      const stateData = oauthStates.get(state);
+      if (!stateData) {
+        return res.status(400).json({ error: '无效的 state 参数' });
+      }
+      oauthStates.delete(state);
+    }
+    
+    const oauthService = new LarkOAuthService(
+      process.env.LARK_APP_ID,
+      process.env.LARK_APP_SECRET
+    );
+    
+    // 使用授权码换取访问令牌
+    const tokenData = await oauthService.getAccessToken(code);
+    
+    // 获取用户信息
+    const larkUserInfo = await oauthService.getUserInfo(tokenData.access_token);
+    
+    // 查找或创建本地用户
+    let user = await User.findOne({ larkUserId: larkUserInfo.user_id });
+    
+    if (!user) {
+      // 创建新用户
+      user = new User({
+        username: larkUserInfo.en_name || larkUserInfo.name || larkUserInfo.user_id,
+        email: larkUserInfo.email || `${larkUserInfo.user_id}@lark.user`,
+        displayName: larkUserInfo.name,
+        larkUserId: larkUserInfo.user_id,
+        larkAccessToken: tokenData.access_token,
+        larkRefreshToken: tokenData.refresh_token,
+        larkTokenExpiry: new Date(Date.now() + tokenData.expire * 1000),
+        avatar: larkUserInfo.avatar_url,
+        department: larkUserInfo.department_ids?.[0] || '',
+        role: 'user',
+        isActive: true
+      });
+      
+      // 设置随机密码（用户不会使用密码登录）
+      user.password = require('crypto').randomBytes(32).toString('hex');
+      
+      await user.save();
+    } else {
+      // 更新现有用户的 Lark 令牌
+      user.larkAccessToken = tokenData.access_token;
+      user.larkRefreshToken = tokenData.refresh_token;
+      user.larkTokenExpiry = new Date(Date.now() + tokenData.expire * 1000);
+      user.avatar = larkUserInfo.avatar_url;
+      await user.save();
+    }
+    
+    // 生成 JWT token
+    const token = user.generateAuthToken();
+    const refreshToken = user.generateRefreshToken();
+    
+    // 保存 refresh token
+    user.refreshToken = refreshToken;
+    await user.save();
+    
+    res.json({
+      message: 'Lark 登录成功',
+      user: user.toSafeObject(),
+      token,
+      refreshToken
+    });
   } catch (error) {
-    console.error('飞书登录失败:', error);
-    res.status(500).json({ error: '飞书登录失败' });
+    console.error('Lark 登录失败:', error);
+    res.status(500).json({ error: 'Lark 登录失败' });
   }
 });
 

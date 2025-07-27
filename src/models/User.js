@@ -48,6 +48,22 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  // Lark OAuth 相关字段
+  larkUserId: {
+    type: String,
+    sparse: true,
+    unique: true,
+    index: true
+  },
+  larkAccessToken: {
+    type: String
+  },
+  larkRefreshToken: {
+    type: String
+  },
+  larkTokenExpiry: {
+    type: Date
+  },
   larkUserId: {
     type: String,
     sparse: true,
