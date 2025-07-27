@@ -103,6 +103,22 @@
             font-family: monospace;
             font-size: 14px;
         }
+        .tab-button {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            background-color: #f0f0f0;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-radius: 4px;
+        }
+        .tab-button:hover {
+            background-color: #e0e0e0;
+        }
+        .tab-button.active {
+            background-color: #2196F3;
+            color: white;
+            border-color: #2196F3;
+        }
     </style>
 </head>
 <body>
@@ -131,7 +147,20 @@
             <button class="sync-btn" onclick="syncBugs()">同步 Bug 数据</button>
             <button class="sync-btn" onclick="syncRequirements()">同步需求数据</button>
             <button class="sync-btn" onclick="syncAll()">同步所有数据</button>
+            <button class="sync-btn" style="background-color: #4CAF50;" onclick="viewSyncedData()">查看同步数据一览</button>
             <div id="sync-result" class="sync-result"></div>
+            
+            <div id="data-view" style="display: none; margin-top: 20px;">
+                <h3>同步数据一览</h3>
+                <div class="data-tabs" style="margin-bottom: 10px;">
+                    <button class="tab-button active" onclick="switchTab('bugs')" style="margin-right: 5px;">Bug 数据</button>
+                    <button class="tab-button" onclick="switchTab('requirements')" style="margin-right: 5px;">需求数据</button>
+                    <button class="tab-button" onclick="switchTab('all')">所有任务</button>
+                </div>
+                <div id="data-content" style="border: 1px solid #ddd; padding: 10px; max-height: 500px; overflow-y: auto; background: #f9f9f9;">
+                    <p>加载中...</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -292,6 +321,135 @@
             element.className = type;
             element.textContent = message;
             element.style.display = 'block';
+        }
+        
+        let currentTab = 'bugs';
+        
+        async function viewSyncedData() {
+            const dataView = document.getElementById('data-view');
+            dataView.style.display = 'block';
+            await loadTaskData(currentTab);
+        }
+        
+        async function switchTab(type) {
+            currentTab = type;
+            
+            // 更新标签按钮状态
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            await loadTaskData(type);
+        }
+        
+        async function loadTaskData(type) {
+            const contentDiv = document.getElementById('data-content');
+            contentDiv.innerHTML = '<p>加载中...</p>';
+            
+            try {
+                let filter = {};
+                if (type === 'bugs') {
+                    filter.type = 'bug';
+                } else if (type === 'requirements') {
+                    filter.type = 'requirement';
+                }
+                
+                const queryParams = new URLSearchParams(filter);
+                const response = await fetch(`${API_BASE}/tasks?${queryParams}`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`获取数据失败: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                displayTaskData(data.tasks, type);
+            } catch (error) {
+                contentDiv.innerHTML = `<div class="error">加载失败: ${error.message}</div>`;
+            }
+        }
+        
+        function displayTaskData(tasks, type) {
+            const contentDiv = document.getElementById('data-content');
+            
+            if (!tasks || tasks.length === 0) {
+                contentDiv.innerHTML = `<p>暂无${getTypeLabel(type)}数据</p>`;
+                return;
+            }
+            
+            const tableHtml = `
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background-color: #f0f0f0;">
+                            <th style="border: 1px solid #ddd; padding: 8px;">ID</th>
+                            <th style="border: 1px solid #ddd; padding: 8px;">标题</th>
+                            <th style="border: 1px solid #ddd; padding: 8px;">状态</th>
+                            <th style="border: 1px solid #ddd; padding: 8px;">优先级</th>
+                            <th style="border: 1px solid #ddd; padding: 8px;">负责人</th>
+                            <th style="border: 1px solid #ddd; padding: 8px;">来源</th>
+                            <th style="border: 1px solid #ddd; padding: 8px;">同步时间</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tasks.map(task => `
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 8px; font-size: 12px;">${task.id}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px;">${task.title}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px;">
+                                    <span style="padding: 2px 6px; border-radius: 3px; font-size: 12px; background-color: ${getStatusColor(task.status)};">
+                                        ${task.status}
+                                    </span>
+                                </td>
+                                <td style="border: 1px solid #ddd; padding: 8px;">
+                                    <span style="padding: 2px 6px; border-radius: 3px; font-size: 12px; background-color: ${getPriorityColor(task.priority)};">
+                                        ${task.priority}
+                                    </span>
+                                </td>
+                                <td style="border: 1px solid #ddd; padding: 8px;">${task.assignee || '-'}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; font-size: 12px;">${task.sourceType || '-'}</td>
+                                <td style="border: 1px solid #ddd; padding: 8px; font-size: 12px;">${task.syncedAt ? new Date(task.syncedAt).toLocaleString('zh-CN') : '-'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                <p style="margin-top: 10px; color: #666;">共 ${tasks.length} 条${getTypeLabel(type)}记录</p>
+            `;
+            
+            contentDiv.innerHTML = tableHtml;
+        }
+        
+        function getTypeLabel(type) {
+            switch(type) {
+                case 'bugs': return 'Bug';
+                case 'requirements': return '需求';
+                case 'all': return '任务';
+                default: return '数据';
+            }
+        }
+        
+        function getStatusColor(status) {
+            const colors = {
+                'pending': '#FFA500',
+                'in_progress': '#4169E1',
+                'completed': '#32CD32',
+                'closed': '#808080',
+                'resolved': '#228B22'
+            };
+            return colors[status] || '#D3D3D3';
+        }
+        
+        function getPriorityColor(priority) {
+            const colors = {
+                'urgent': '#FF0000',
+                'high': '#FF6347',
+                'medium': '#FFD700',
+                'low': '#90EE90'
+            };
+            return colors[priority] || '#D3D3D3';
         }
     </script>
 </body>
