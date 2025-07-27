@@ -291,10 +291,18 @@ router.get('/oauth/lark/authorize', (req, res) => {
   }
 });
 
-// OAuth 回调处理
-router.get('/oauth/lark/callback', async (req, res) => {
+// OAuth 回调处理 - 支持 GET 和 POST
+router.all('/oauth/lark/callback', async (req, res) => {
   try {
-    const { code, state } = req.query;
+    // 合并 query 和 body 参数
+    const params = { ...req.query, ...req.body };
+    const { code, state, challenge } = params;
+    
+    // 处理 Lark challenge 验证（重定向 URL 验证）
+    if (challenge) {
+      console.log('Lark OAuth challenge 验证:', challenge);
+      return res.json({ challenge });
+    }
     
     if (!code || !state) {
       return res.status(400).json({ error: '缺少必要参数' });
