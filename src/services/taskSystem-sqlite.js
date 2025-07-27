@@ -339,7 +339,7 @@ class TaskSystem {
       }
       
       const appToken = this.extractAppToken(bugTableId);
-      const records = await this.larkClient.getRecords(appToken, bugTableId);
+      const records = await this.larkClient.getTableRecords(appToken, bugTableId);
       
       let synced = 0;
       let created = 0;
@@ -384,7 +384,7 @@ class TaskSystem {
       }
       
       const appToken = this.extractAppToken(reqTableId);
-      const records = await this.larkClient.getRecords(appToken, reqTableId);
+      const records = await this.larkClient.getTableRecords(appToken, reqTableId);
       
       let synced = 0;
       let created = 0;
