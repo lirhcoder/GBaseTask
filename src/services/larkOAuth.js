@@ -16,15 +16,20 @@ class LarkOAuthService {
    * @returns {string} 授权 URL
    */
   getAuthorizationURL(state) {
+    console.log('生成 OAuth URL, redirect_uri:', this.redirectUri);
+    
     const params = new URLSearchParams({
       app_id: this.appId,
       redirect_uri: this.redirectUri,
       state: state,
-      // 使用 authen/v1 端点
       response_type: 'code'
     });
 
-    return `${this.baseURL}/open-apis/authen/v1/authorize?${params.toString()}`;
+    // 使用正确的授权域名
+    const authUrl = `https://accounts.larksuite.com/open-apis/authen/v1/authorize?${params.toString()}`;
+    console.log('生成的授权 URL:', authUrl);
+    
+    return authUrl;
   }
 
   /**
