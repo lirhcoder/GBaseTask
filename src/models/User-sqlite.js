@@ -192,8 +192,20 @@ User.prototype.updateLastLogin = async function() {
 User.prototype.toSafeObject = function() {
   const user = this.toJSON();
   delete user.password;
-  delete user.refreshToken;
-  return user;
+  delete user.refresh_token;
+  return {
+    id: user.id,
+    username: user.username,
+    email: user.email,
+    displayName: user.display_name,
+    role: user.role,
+    department: user.department,
+    larkUserId: user.lark_user_id,
+    isActive: user.is_active,
+    avatar: user.avatar,
+    createdAt: user.created_at,
+    updatedAt: user.updated_at
+  };
 };
 
 module.exports = User;

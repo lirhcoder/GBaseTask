@@ -24,7 +24,8 @@ class LarkOAuthService {
       state: state,
       response_type: 'code',
       // 添加必要的权限范围
-      scope: 'contact:user.base:readonly contact:user.email:readonly'
+      // 暂时只请求基本信息，不请求邮箱权限
+      scope: 'contact:user.base:readonly'
     });
 
     // 使用正确的授权域名

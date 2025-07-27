@@ -1,7 +1,9 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { User } = require('../utils/model-adapter');
-const { authenticate, refreshAuth } = require('../middleware/auth');
+// 根据环境选择正确的认证中间件
+const isSQLite = process.argv[1] && process.argv[1].includes('index-sqlite.js');
+const { authenticate, refreshAuth } = require(isSQLite ? '../middleware/auth-sqlite' : '../middleware/auth');
 const LarkOAuthService = require('../services/larkOAuth');
 const LarkEncryption = require('../services/larkEncryption');
 
