@@ -19,7 +19,14 @@ const authenticate = async (req, res, next) => {
       attributes: { exclude: ['password', 'refresh_token'] }
     });
     
-    if (!user || !user.is_active) {
+    console.log('查找到的用户:', user ? {
+      id: user.id,
+      username: user.username,
+      isActive: user.isActive,
+      dataValues: user.dataValues
+    } : null);
+    
+    if (!user || !user.isActive) {
       console.log('用户不存在或未激活');
       throw new Error();
     }
@@ -89,7 +96,7 @@ const optionalAuth = async (req, res, next) => {
         attributes: { exclude: ['password', 'refresh_token'] }
       });
       
-      if (user && user.is_active) {
+      if (user && user.isActive) {
         req.user = user;
         req.token = token;
       }
@@ -122,7 +129,7 @@ const refreshAuth = async (req, res, next) => {
 
     const user = await User.findByPk(decoded.id);
     
-    if (!user || !user.is_active || user.refresh_token !== refreshToken) {
+    if (!user || !user.isActive || user.refreshToken !== refreshToken) {
       throw new Error();
     }
 

@@ -353,35 +353,55 @@ router.all('/oauth/lark/callback', async (req, res) => {
     console.log('获取到用户信息:', larkUserInfo);
     
     // 查找或创建本地用户
-    let user = await User.findOne({ larkUserId: larkUserInfo.user_id });
+    let user;
+    if (isSQLite) {
+      // SQLite 使用 where 子句
+      user = await User.findOne({ where: { larkUserId: larkUserInfo.user_id } });
+    } else {
+      // MongoDB 直接使用对象
+      user = await User.findOne({ larkUserId: larkUserInfo.user_id });
+    }
     
     if (!user) {
       // 创建新用户
-      user = new User({
+      const userData = {
         username: larkUserInfo.en_name || larkUserInfo.name || larkUserInfo.user_id,
         email: larkUserInfo.email || `${larkUserInfo.user_id}@lark.user`,
         displayName: larkUserInfo.name,
         larkUserId: larkUserInfo.user_id,
-        larkAccessToken: tokenData.access_token,
-        larkRefreshToken: tokenData.refresh_token,
-        larkTokenExpiry: new Date(Date.now() + tokenData.expire * 1000),
         avatar: larkUserInfo.avatar_url,
         department: larkUserInfo.department_ids?.[0] || '',
         role: 'user',
-        isActive: true
-      });
+        isActive: true,
+        password: require('crypto').randomBytes(32).toString('hex')
+      };
       
-      // 设置随机密码（用户不会使用密码登录）
-      user.password = require('crypto').randomBytes(32).toString('hex');
-      
-      await user.save();
+      if (isSQLite) {
+        // SQLite 使用 create 方法
+        user = await User.create(userData);
+      } else {
+        // MongoDB 使用 new 和 save
+        user = new User(userData);
+        user.larkAccessToken = tokenData.access_token;
+        user.larkRefreshToken = tokenData.refresh_token;
+        user.larkTokenExpiry = new Date(Date.now() + tokenData.expire * 1000);
+        await user.save();
+      }
     } else {
       // 更新现有用户的 Lark 令牌
-      user.larkAccessToken = tokenData.access_token;
-      user.larkRefreshToken = tokenData.refresh_token;
-      user.larkTokenExpiry = new Date(Date.now() + tokenData.expire * 1000);
-      user.avatar = larkUserInfo.avatar_url;
-      await user.save();
+      if (isSQLite) {
+        // SQLite 使用 update 方法
+        await user.update({
+          avatar: larkUserInfo.avatar_url
+        });
+      } else {
+        // MongoDB 直接修改属性
+        user.larkAccessToken = tokenData.access_token;
+        user.larkRefreshToken = tokenData.refresh_token;
+        user.larkTokenExpiry = new Date(Date.now() + tokenData.expire * 1000);
+        user.avatar = larkUserInfo.avatar_url;
+        await user.save();
+      }
     }
     
     // 生成 JWT token
@@ -443,35 +463,55 @@ router.post('/oauth/lark', async (req, res) => {
     console.log('获取到用户信息:', larkUserInfo);
     
     // 查找或创建本地用户
-    let user = await User.findOne({ larkUserId: larkUserInfo.user_id });
+    let user;
+    if (isSQLite) {
+      // SQLite 使用 where 子句
+      user = await User.findOne({ where: { larkUserId: larkUserInfo.user_id } });
+    } else {
+      // MongoDB 直接使用对象
+      user = await User.findOne({ larkUserId: larkUserInfo.user_id });
+    }
     
     if (!user) {
       // 创建新用户
-      user = new User({
+      const userData = {
         username: larkUserInfo.en_name || larkUserInfo.name || larkUserInfo.user_id,
         email: larkUserInfo.email || `${larkUserInfo.user_id}@lark.user`,
         displayName: larkUserInfo.name,
         larkUserId: larkUserInfo.user_id,
-        larkAccessToken: tokenData.access_token,
-        larkRefreshToken: tokenData.refresh_token,
-        larkTokenExpiry: new Date(Date.now() + tokenData.expire * 1000),
         avatar: larkUserInfo.avatar_url,
         department: larkUserInfo.department_ids?.[0] || '',
         role: 'user',
-        isActive: true
-      });
+        isActive: true,
+        password: require('crypto').randomBytes(32).toString('hex')
+      };
       
-      // 设置随机密码（用户不会使用密码登录）
-      user.password = require('crypto').randomBytes(32).toString('hex');
-      
-      await user.save();
+      if (isSQLite) {
+        // SQLite 使用 create 方法
+        user = await User.create(userData);
+      } else {
+        // MongoDB 使用 new 和 save
+        user = new User(userData);
+        user.larkAccessToken = tokenData.access_token;
+        user.larkRefreshToken = tokenData.refresh_token;
+        user.larkTokenExpiry = new Date(Date.now() + tokenData.expire * 1000);
+        await user.save();
+      }
     } else {
       // 更新现有用户的 Lark 令牌
-      user.larkAccessToken = tokenData.access_token;
-      user.larkRefreshToken = tokenData.refresh_token;
-      user.larkTokenExpiry = new Date(Date.now() + tokenData.expire * 1000);
-      user.avatar = larkUserInfo.avatar_url;
-      await user.save();
+      if (isSQLite) {
+        // SQLite 使用 update 方法
+        await user.update({
+          avatar: larkUserInfo.avatar_url
+        });
+      } else {
+        // MongoDB 直接修改属性
+        user.larkAccessToken = tokenData.access_token;
+        user.larkRefreshToken = tokenData.refresh_token;
+        user.larkTokenExpiry = new Date(Date.now() + tokenData.expire * 1000);
+        user.avatar = larkUserInfo.avatar_url;
+        await user.save();
+      }
     }
     
     // 生成 JWT token
