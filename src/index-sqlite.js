@@ -150,7 +150,7 @@ async function startServer() {
     );
     
     // 初始化任务系统
-    const taskSystem = new TaskSystem();
+    const taskSystem = new TaskSystem(larkClient);
     setTaskSystem(taskSystem);
     
     // 初始化同步服务
