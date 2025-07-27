@@ -20,6 +20,22 @@ app.use(bodyParser.urlencoded({ extended: true }));
 // 静态文件服务（用于测试页面）
 app.use(express.static(path.join(__dirname, '..')));
 
+// Lark OAuth 简化回调路由（备选方案）
+app.all('/lark-callback', (req, res) => {
+  const params = { ...req.query, ...req.body };
+  const { challenge } = params;
+  
+  if (challenge) {
+    console.log('Lark challenge 验证 (简化路由):', challenge);
+    return res.json({ challenge });
+  }
+  
+  // 转发到主回调处理
+  req.url = '/api/auth/oauth/lark/callback';
+  req.originalUrl = '/api/auth/oauth/lark/callback' + (req._parsedUrl.search || '');
+  app.handle(req, res);
+});
+
 // API 路由
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
