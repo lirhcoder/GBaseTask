@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const path = require('path');
 
 // 导入数据库连接
 const { connectDatabase } = require('./utils/database-sqlite');
@@ -24,6 +25,9 @@ app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
+// 静态文件服务（用于测试页面）
+app.use(express.static(path.join(__dirname, '..')));
+
 // 健康检查端点
 app.get('/health', (req, res) => {
   res.json({ 
@@ -44,6 +48,45 @@ app.get('/api', (req, res) => {
       health: '/health',
       message: '这是简化版本，使用SQLite本地数据库'
     }
+  });
+});
+
+// Lark OAuth 简化回调路由（备选方案）
+app.all('/lark-callback', (req, res) => {
+  console.log('Lark callback 请求:', {
+    method: req.method,
+    query: req.query,
+    body: req.body,
+    headers: req.headers
+  });
+  
+  const params = { ...req.query, ...req.body };
+  const { challenge } = params;
+  
+  if (challenge) {
+    console.log('Lark challenge 验证 (简化路由):', challenge);
+    return res.json({ challenge });
+  }
+  
+  // 转发到主回调处理
+  req.url = '/api/auth/oauth/lark/callback';
+  req.originalUrl = '/api/auth/oauth/lark/callback' + (req._parsedUrl.search || '');
+  app.handle(req, res);
+});
+
+// 调试路由 - 测试 challenge 响应
+app.all('/test-challenge', (req, res) => {
+  const params = { ...req.query, ...req.body };
+  console.log('Test challenge 请求:', params);
+  
+  if (params.challenge) {
+    return res.json({ challenge: params.challenge });
+  }
+  
+  res.json({ 
+    message: 'Challenge test endpoint',
+    received: params,
+    instruction: 'Send challenge parameter to get it echoed back'
   });
 });
 
