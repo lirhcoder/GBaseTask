@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: lark-task-system
+    runtime: node
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: LARK_APP_ID
+        sync: false
+      - key: LARK_APP_SECRET
+        sync: false
+      - key: LARK_BUG_TABLE_ID
+        sync: false
+      - key: LARK_REQUIREMENT_TABLE_ID
+        sync: false
+      - key: LARK_OAUTH_REDIRECT_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: LARK_INTERNATIONAL
+        value: true
