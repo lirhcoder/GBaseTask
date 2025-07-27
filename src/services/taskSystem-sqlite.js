@@ -327,6 +327,97 @@ class TaskSystem {
       throw error;
     }
   }
+
+  // 为兼容性添加的方法（SQLite 版本使用统一的同步方法）
+  async syncBugsToTasks() {
+    console.log('SQLite 版本：同步 Bug 数据...');
+    try {
+      // 调用通用的同步方法，只同步 Bug 类型
+      const bugTableId = process.env.LARK_BUG_TABLE_ID;
+      if (!bugTableId) {
+        throw new Error('未配置 Bug 表格 ID (LARK_BUG_TABLE_ID)');
+      }
+      
+      const appToken = this.extractAppToken(bugTableId);
+      const records = await this.larkClient.getRecords(appToken, bugTableId);
+      
+      let synced = 0;
+      let created = 0;
+      let updated = 0;
+      
+      for (const record of records.items) {
+        const bugData = this.parseBugRecord(record);
+        let task = await Task.findOne({ where: { larkId: bugData.larkId } });
+        
+        if (task) {
+          await task.update(bugData);
+          updated++;
+        } else {
+          await Task.create({
+            ...bugData,
+            type: 'bug'
+          });
+          created++;
+        }
+        synced++;
+      }
+      
+      return {
+        total: synced,
+        created,
+        updated,
+        message: `同步完成：共处理 ${synced} 个 Bug，创建 ${created} 个，更新 ${updated} 个`
+      };
+    } catch (error) {
+      console.error('同步 Bug 失败:', error);
+      throw error;
+    }
+  }
+
+  async syncRequirementsToTasks() {
+    console.log('SQLite 版本：同步需求数据...');
+    try {
+      // 调用通用的同步方法，只同步需求类型
+      const reqTableId = process.env.LARK_REQUIREMENT_TABLE_ID;
+      if (!reqTableId) {
+        throw new Error('未配置需求表格 ID (LARK_REQUIREMENT_TABLE_ID)');
+      }
+      
+      const appToken = this.extractAppToken(reqTableId);
+      const records = await this.larkClient.getRecords(appToken, reqTableId);
+      
+      let synced = 0;
+      let created = 0;
+      let updated = 0;
+      
+      for (const record of records.items) {
+        const reqData = this.parseRequirementRecord(record);
+        let task = await Task.findOne({ where: { larkId: reqData.larkId } });
+        
+        if (task) {
+          await task.update(reqData);
+          updated++;
+        } else {
+          await Task.create({
+            ...reqData,
+            type: 'requirement'
+          });
+          created++;
+        }
+        synced++;
+      }
+      
+      return {
+        total: synced,
+        created,
+        updated,
+        message: `同步完成：共处理 ${synced} 个需求，创建 ${created} 个，更新 ${updated} 个`
+      };
+    } catch (error) {
+      console.error('同步需求失败:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = TaskSystem;
