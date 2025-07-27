@@ -4,19 +4,31 @@ Lark OAuth 需要 HTTPS 回调 URL。以下是几种解决方案：
 
 ## 方案一：使用 ngrok（推荐）
 
-### 1. 安装 ngrok
+### 1. 安装和配置 ngrok
 
-访问 [ngrok.com](https://ngrok.com/) 下载并安装。
-
-### 2. 启动本地服务
-
+#### 自动配置（推荐）
 ```bash
-npm start
+# 运行设置脚本
+双击 setup-ngrok.bat
 ```
 
-### 3. 创建 ngrok 隧道
+#### 手动配置
+1. 访问 [ngrok.com](https://ngrok.com/) 下载并安装
+2. 注册账号：https://dashboard.ngrok.com/signup
+3. 获取 authtoken：https://dashboard.ngrok.com/get-started/your-authtoken
+4. 配置 authtoken：
+   ```bash
+   ngrok config add-authtoken YOUR_AUTH_TOKEN
+   ```
+
+### 2. 启动开发环境
 
 ```bash
+# Windows - 双击运行
+start-with-ngrok.bat
+
+# 或手动启动
+npm start
 ngrok http 3001
 ```
 
@@ -148,9 +160,14 @@ cloudflared tunnel --url http://localhost:3001
 
 ## 注意事项
 
-1. **ngrok 免费版限制**
+1. **ngrok 需要认证**
+   - 现在 ngrok 需要注册账号并配置 authtoken
+   - 免费账号即可满足开发需求
+   - 注册地址：https://dashboard.ngrok.com/signup
+
+2. **ngrok 免费版限制**
    - URL 会在每次重启后改变
-   - 有请求数量限制
+   - 有请求数量限制（每分钟 40 次）
    - 付费版可获得固定子域名
 
 2. **安全考虑**
