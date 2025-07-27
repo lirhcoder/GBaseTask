@@ -339,7 +339,7 @@ class TaskSystem {
       }
       
       const appToken = this.extractAppToken(bugTableId);
-      const records = await this.larkClient.getRecords(appToken, bugTableId);
+      const records = await this.larkClient.getTableRecords(appToken, bugTableId);
       
       let synced = 0;
       let created = 0;
@@ -347,15 +347,40 @@ class TaskSystem {
       
       for (const record of records.items) {
         const bugData = this.parseBugRecord(record);
-        let task = await Task.findOne({ where: { larkId: bugData.larkId } });
+        
+        // 使用 sourceId 而不是 larkId
+        let task = await Task.findOne({ 
+          where: { 
+            sourceId: bugData.larkId,
+            sourceType: 'lark_bug'
+          } 
+        });
         
         if (task) {
-          await task.update(bugData);
+          // 更新现有任务
+          const updateData = {
+            title: bugData.title,
+            description: bugData.description,
+            status: bugData.status,
+            priority: bugData.priority,
+            assignee: bugData.assignee,
+            syncedAt: new Date()
+          };
+          await task.update(updateData);
           updated++;
         } else {
+          // 创建新任务
           await Task.create({
-            ...bugData,
-            type: 'bug'
+            id: `bug_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            title: bugData.title,
+            description: bugData.description,
+            status: bugData.status,
+            priority: bugData.priority,
+            assignee: bugData.assignee,
+            type: 'bug',
+            sourceId: bugData.larkId,
+            sourceType: 'lark_bug',
+            syncedAt: new Date()
           });
           created++;
         }
@@ -384,7 +409,7 @@ class TaskSystem {
       }
       
       const appToken = this.extractAppToken(reqTableId);
-      const records = await this.larkClient.getRecords(appToken, reqTableId);
+      const records = await this.larkClient.getTableRecords(appToken, reqTableId);
       
       let synced = 0;
       let created = 0;
@@ -392,15 +417,40 @@ class TaskSystem {
       
       for (const record of records.items) {
         const reqData = this.parseRequirementRecord(record);
-        let task = await Task.findOne({ where: { larkId: reqData.larkId } });
+        
+        // 使用 sourceId 而不是 larkId
+        let task = await Task.findOne({ 
+          where: { 
+            sourceId: reqData.larkId,
+            sourceType: 'lark_requirement'
+          } 
+        });
         
         if (task) {
-          await task.update(reqData);
+          // 更新现有任务
+          const updateData = {
+            title: reqData.title,
+            description: reqData.description,
+            status: reqData.status,
+            priority: reqData.priority,
+            assignee: reqData.assignee,
+            syncedAt: new Date()
+          };
+          await task.update(updateData);
           updated++;
         } else {
+          // 创建新任务
           await Task.create({
-            ...reqData,
-            type: 'requirement'
+            id: `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            title: reqData.title,
+            description: reqData.description,
+            status: reqData.status,
+            priority: reqData.priority,
+            assignee: reqData.assignee,
+            type: 'requirement',
+            sourceId: reqData.larkId,
+            sourceType: 'lark_requirement',
+            syncedAt: new Date()
           });
           created++;
         }

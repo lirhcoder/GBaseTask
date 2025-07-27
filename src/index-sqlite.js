@@ -148,13 +148,14 @@ async function startServer() {
       process.env.LARK_APP_ID,
       process.env.LARK_APP_SECRET
     );
+    await larkClient.initialize();
     
     // 初始化任务系统
-    const taskSystem = new TaskSystem();
+    const taskSystem = new TaskSystem(larkClient);
     setTaskSystem(taskSystem);
     
     // 初始化同步服务
-    const syncService = new SyncService(larkClient, taskSystem);
+    const syncService = new SyncService(taskSystem);
     setSyncService(syncService);
     
     // 初始化提醒服务
