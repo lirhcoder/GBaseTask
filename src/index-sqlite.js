@@ -154,7 +154,7 @@ async function startServer() {
     setTaskSystem(taskSystem);
     
     // 初始化同步服务
-    const syncService = new SyncService(larkClient, taskSystem);
+    const syncService = new SyncService(taskSystem);
     setSyncService(syncService);
     
     // 初始化提醒服务
