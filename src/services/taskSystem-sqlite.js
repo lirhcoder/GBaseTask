@@ -248,38 +248,95 @@ class TaskSystem {
 
   parseBugRecord(record) {
     const fields = record.fields || {};
+    
+    // 处理日文字段名
+    const title = fields['サブタスク'] || fields['标题'] || fields['Title'] || '未命名 Bug';
+    const description = fields['備考'] || fields['描述'] || fields['Description'] || '';
+    const status = fields['進捗'] || fields['状态'] || fields['Status'];
+    
+    // 处理负责人（可能是数组）
+    let assignee = '';
+    if (fields['責任者'] && Array.isArray(fields['責任者']) && fields['責任者'].length > 0) {
+      assignee = fields['責任者'][0].name || fields['責任者'][0].en_name || '';
+    } else if (fields['负责人']) {
+      assignee = fields['负责人'];
+    }
+    
+    // 处理期限
+    let dueDate = null;
+    if (fields['期限']) {
+      dueDate = new Date(fields['期限']);
+    }
+    
     return {
-      larkId: fields['Bug ID'] || fields['编号'] || record.record_id,
-      title: fields['标题'] || fields['Title'] || '未命名 Bug',
-      description: fields['描述'] || fields['Description'] || '',
-      status: this.mapStatus(fields['状态'] || fields['Status']),
-      priority: this.mapPriority(fields['优先级'] || fields['Priority']),
-      assignee: fields['负责人'] || fields['Assignee'] || ''
+      larkId: record.record_id,
+      title: title,
+      description: description,
+      status: this.mapJapaneseStatus(status),
+      priority: this.mapPriority(fields['优先级'] || fields['Priority'] || 'medium'),
+      assignee: assignee,
+      dueDate: dueDate
     };
   }
 
   parseRequirementRecord(record) {
     const fields = record.fields || {};
+    
+    // 处理日文字段名（和 Bug 使用相同的字段结构）
+    const title = fields['サブタスク'] || fields['标题'] || fields['Title'] || '未命名需求';
+    const description = fields['備考'] || fields['描述'] || fields['Description'] || '';
+    const status = fields['進捗'] || fields['状态'] || fields['Status'];
+    
+    // 处理负责人（可能是数组）
+    let assignee = '';
+    if (fields['責任者'] && Array.isArray(fields['責任者']) && fields['責任者'].length > 0) {
+      assignee = fields['責任者'][0].name || fields['責任者'][0].en_name || '';
+    } else if (fields['负责人']) {
+      assignee = fields['负责人'];
+    }
+    
+    // 处理期限
+    let dueDate = null;
+    if (fields['期限']) {
+      dueDate = new Date(fields['期限']);
+    }
+    
     return {
-      larkId: fields['需求 ID'] || fields['编号'] || record.record_id,
-      title: fields['标题'] || fields['Title'] || '未命名需求',
-      description: fields['描述'] || fields['Description'] || '',
-      status: this.mapStatus(fields['状态'] || fields['Status']),
-      priority: this.mapPriority(fields['优先级'] || fields['Priority']),
-      assignee: fields['负责人'] || fields['Assignee'] || ''
+      larkId: record.record_id,
+      title: title,
+      description: description,
+      status: this.mapJapaneseStatus(status),
+      priority: this.mapPriority(fields['优先级'] || fields['Priority'] || 'medium'),
+      assignee: assignee,
+      dueDate: dueDate
     };
   }
 
   mapStatus(larkStatus) {
     const statusMap = {
-      '待处理': 'open',
+      '待处理': 'pending',
       '进行中': 'in_progress',
-      '已完成': 'closed',
-      'To Do': 'open',
+      '已完成': 'completed',
+      'To Do': 'pending',
       'In Progress': 'in_progress',
-      'Done': 'closed'
+      'Done': 'completed'
     };
-    return statusMap[larkStatus] || 'open';
+    return statusMap[larkStatus] || 'pending';
+  }
+  
+  mapJapaneseStatus(larkStatus) {
+    const statusMap = {
+      '処理待ち': 'pending',        // 待处理
+      '進行中': 'in_progress',      // 进行中
+      '完了': 'completed',          // 完成
+      'レビュー中': 'pending_review', // 审查中
+      'テスト中': 'testing',        // 测试中
+      'リリース済み': 'deployed',   // 已发布
+      'クローズ': 'closed',         // 关闭
+      'キャンセル': 'cancelled',    // 取消
+      '保留': 'on_hold'            // 保留
+    };
+    return statusMap[larkStatus] || this.mapStatus(larkStatus);
   }
 
   mapPriority(larkPriority) {
@@ -364,6 +421,7 @@ class TaskSystem {
             status: bugData.status,
             priority: bugData.priority,
             assignee: bugData.assignee,
+            dueDate: bugData.dueDate,
             syncedAt: new Date()
           };
           await task.update(updateData);
@@ -377,6 +435,7 @@ class TaskSystem {
             status: bugData.status,
             priority: bugData.priority,
             assignee: bugData.assignee,
+            dueDate: bugData.dueDate,
             type: 'bug',
             sourceId: bugData.larkId,
             sourceType: 'lark_bug',
@@ -434,6 +493,7 @@ class TaskSystem {
             status: reqData.status,
             priority: reqData.priority,
             assignee: reqData.assignee,
+            dueDate: reqData.dueDate,
             syncedAt: new Date()
           };
           await task.update(updateData);
@@ -447,6 +507,7 @@ class TaskSystem {
             status: reqData.status,
             priority: reqData.priority,
             assignee: reqData.assignee,
+            dueDate: reqData.dueDate,
             type: 'requirement',
             sourceId: reqData.larkId,
             sourceType: 'lark_requirement',
