@@ -3,6 +3,7 @@ const { body, validationResult } = require('express-validator');
 const { User } = require('../utils/model-adapter');
 const { authenticate, refreshAuth } = require('../middleware/auth');
 const LarkOAuthService = require('../services/larkOAuth');
+const LarkEncryption = require('../services/larkEncryption');
 
 const router = express.Router();
 
@@ -296,11 +297,26 @@ router.all('/oauth/lark/callback', async (req, res) => {
   try {
     // 合并 query 和 body 参数
     const params = { ...req.query, ...req.body };
-    const { code, state, challenge } = params;
+    const { code, state, challenge, encrypt } = params;
     
-    // 处理 Lark challenge 验证（重定向 URL 验证）
+    // 处理加密的 challenge
+    if (encrypt) {
+      console.log('Lark 加密 challenge 请求');
+      const encryption = new LarkEncryption();
+      const decrypted = encryption.decrypt(encrypt);
+      
+      if (decrypted && decrypted.challenge) {
+        console.log('解密成功, challenge:', decrypted.challenge);
+        return res.json({ challenge: decrypted.challenge });
+      } else {
+        console.error('解密失败或没有 challenge');
+        return res.status(400).json({ error: '解密失败' });
+      }
+    }
+    
+    // 处理明文 challenge（备用）
     if (challenge) {
-      console.log('Lark OAuth challenge 验证:', challenge);
+      console.log('Lark 明文 challenge 验证:', challenge);
       return res.json({ challenge });
     }
     

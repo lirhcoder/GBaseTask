@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
+const LarkEncryption = require('./services/larkEncryption');
 
 // 导入数据库连接
 const { connectDatabase } = require('./utils/database-sqlite');
@@ -61,8 +62,24 @@ app.all('/lark-callback', (req, res) => {
   });
   
   const params = { ...req.query, ...req.body };
-  const { challenge } = params;
+  const { challenge, encrypt } = params;
   
+  // 处理加密的 challenge
+  if (encrypt) {
+    console.log('Lark 加密 challenge 请求');
+    const encryption = new LarkEncryption();
+    const decrypted = encryption.decrypt(encrypt);
+    
+    if (decrypted && decrypted.challenge) {
+      console.log('解密成功, challenge:', decrypted.challenge);
+      return res.json({ challenge: decrypted.challenge });
+    } else {
+      console.error('解密失败');
+      return res.status(400).json({ error: '解密失败' });
+    }
+  }
+  
+  // 处理明文 challenge
   if (challenge) {
     console.log('Lark challenge 验证 (简化路由):', challenge);
     return res.json({ challenge });
