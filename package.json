@@ -6,12 +6,15 @@
   "scripts": {
     "start": "node src/index-sqlite.js",
     "start:mongodb": "node src/index.js",
+    "start:https": "node src/server-https.js",
     "start:port": "node start-port.js",
     "dev": "nodemon src/index-sqlite.js",
     "dev:mongodb": "nodemon src/index.js",
+    "dev:https": "nodemon src/server-https.js",
     "test": "jest",
     "lint": "eslint src/",
-    "migrate": "node scripts/migrate.js"
+    "migrate": "node scripts/migrate.js",
+    "cert:create": "create-local-cert.bat"
   },
   "keywords": [
     "lark",

@@ -11,10 +11,28 @@
 1. 访问 [Lark 开发者平台](https://open.larksuite.com)
 2. 进入您的应用配置页面
 3. 在"安全设置"中添加重定向 URL：
-   ```
-   http://localhost:3001/api/auth/oauth/lark/callback
-   ```
-   如果部署到生产环境，需要添加生产环境的 URL。
+
+#### 开发环境选项：
+
+**选项 A: 使用 ngrok（推荐）**
+```
+https://your-subdomain.ngrok.io/api/auth/oauth/lark/callback
+```
+
+**选项 B: 使用本地 HTTPS**
+```
+https://localhost:3001/api/auth/oauth/lark/callback
+```
+
+**选项 C: 使用自定义域名**
+```
+https://lark-dev.local:3001/api/auth/oauth/lark/callback
+```
+
+#### 生产环境：
+```
+https://your-domain.com/api/auth/oauth/lark/callback
+```
 
 4. 确保应用具有以下权限：
    - `auth:user.id:readonly` - 获取用户 ID
@@ -38,14 +56,49 @@ FRONTEND_URL=http://localhost:5173
 LARK_INTERNATIONAL=true
 ```
 
-### 3. OAuth 登录流程
+### 3. 开发环境 HTTPS 设置
+
+由于 Lark 要求使用 HTTPS 回调 URL，您需要先设置 HTTPS：
+
+#### 方法 1: 使用 ngrok（最简单）
+
+```bash
+# 启动本地服务和 ngrok
+双击 start-with-ngrok.bat
+
+# 或手动执行：
+npm start
+ngrok http 3001
+```
+
+然后：
+1. 复制 ngrok 提供的 HTTPS URL
+2. 更新 .env 文件中的 `LARK_OAUTH_REDIRECT_URI`
+3. 在 Lark 开发者平台更新回调 URL
+
+#### 方法 2: 本地 HTTPS 证书
+
+```bash
+# 创建本地证书
+双击 create-local-cert.bat
+
+# 启动 HTTPS 服务器
+npm run start:https
+```
+
+详细说明请参考 [开发环境HTTPS配置指南.md](./开发环境HTTPS配置指南.md)
+
+### 4. OAuth 登录流程
 
 #### 方式一：使用测试页面
 
-1. 打开 `test-lark-oauth.html`
-2. 点击"使用 Lark 登录"按钮
-3. 在 Lark 授权页面登录并授权
-4. 授权成功后自动跳转回应用
+1. 确保 HTTPS 环境已配置
+2. 访问测试页面：
+   - ngrok: `https://your-subdomain.ngrok.io/test-lark-oauth.html`
+   - 本地: `https://localhost:3001/test-lark-oauth.html`
+3. 点击"使用 Lark 登录"按钮
+4. 在 Lark 授权页面登录并授权
+5. 授权成功后自动跳转回应用
 
 #### 方式二：集成到前端应用
 
