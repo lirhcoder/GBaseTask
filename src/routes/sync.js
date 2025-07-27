@@ -1,5 +1,8 @@
 const express = require('express');
 const router = express.Router();
+// 根据环境选择正确的认证中间件
+const isSQLite = process.argv[1] && process.argv[1].includes('index-sqlite.js');
+const { authenticate } = require(isSQLite ? '../middleware/auth-sqlite' : '../middleware/auth');
 
 let syncService = null;
 
@@ -7,7 +10,7 @@ const setSyncService = (ss) => {
   syncService = ss;
 };
 
-router.post('/manual', async (req, res) => {
+router.post('/manual', authenticate, async (req, res) => {
   try {
     const result = await syncService.performSync();
     res.json(result);
@@ -17,7 +20,7 @@ router.post('/manual', async (req, res) => {
   }
 });
 
-router.post('/bugs', async (req, res) => {
+router.post('/bugs', authenticate, async (req, res) => {
   try {
     const result = await syncService.syncBugsOnly();
     res.json(result);
@@ -27,12 +30,22 @@ router.post('/bugs', async (req, res) => {
   }
 });
 
-router.post('/requirements', async (req, res) => {
+router.post('/requirements', authenticate, async (req, res) => {
   try {
     const result = await syncService.syncRequirementsOnly();
     res.json(result);
   } catch (error) {
     console.error('同步需求失败:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+router.post('/all', authenticate, async (req, res) => {
+  try {
+    const result = await syncService.performSync();
+    res.json(result);
+  } catch (error) {
+    console.error('同步所有数据失败:', error);
     res.status(500).json({ error: error.message });
   }
 });
